@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Signal2019-MQTT"
+exit 0

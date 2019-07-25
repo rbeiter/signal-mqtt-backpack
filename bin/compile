@@ -1,0 +1,56 @@
+#Install Mosquitto
+
+cd $1
+
+echo "Getting mosquitto-1.5.tar.gz..."
+
+wget http://mosquitto.org/files/source/mosquitto-1.5.tar.gz
+
+echo "Unpacking mosquitto-1.5.tar.gz..."
+tar -xf mosquitto-1.5.tar.gz
+
+echo "Installing Mosquitto 1.5..."
+cd mosquitto-1.5
+sed -i -e "s/WITH_UUID\:\=yes/WITH_UUID\:\=no/" ./config.mk
+make -s
+
+mkdir -p $1/config
+mkdir -p $1/data
+mkdir -p $1/log
+
+cat > $1/config/mosquitto.passwd << _DONE_
+helloworld:1234
+_DONE_
+
+cat > $1/config/mosquitto.conf << _DONE_
+persistence true
+persistence_location $1/data/
+log_dest file $1/mosquitto.log
+connection_messages true
+allow_anonymous false
+password_file $1/config/mosquitto.passwd
+acl_file $1/config/mosquitto.acl
+listener 1883
+protocol mqtt
+listener 8000
+protocol websockets
+_DONE_
+
+cat > $1/config/mosquitto.acl << _DONE_
+pattern readwrite %u/#
+pattern read +/public_read/#
+pattern write +/public_write/#
+_DONE_
+
+echo "Writing profile.d/mqtt.sh..."
+
+export MQTT_HOME=$(pwd)
+
+cat > $HOME/.profile.d/mqtt.sh << EOF
+export PATH=$MQTT_HOME/src/:$PATH
+export PATH=$MQTT_HOME/client/:$PATH
+EOF
+
+echo "Starting Server..."
+src/mosquitto -v -c $1/config/mosquitto.conf &
+echo "Server Started..."
